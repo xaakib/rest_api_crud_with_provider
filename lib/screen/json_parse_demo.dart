@@ -1,6 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:rest_api_crud_with_provider/screen/services.dart';
-import 'package:rest_api_crud_with_provider/screen/user.dart';
+import 'package:http/http.dart' as http;
 
 class JsonParseDemo extends StatefulWidget {
   @override
@@ -8,37 +9,54 @@ class JsonParseDemo extends StatefulWidget {
 }
 
 class _JsonParseDemoState extends State<JsonParseDemo> {
-  //
-  List<Users> _users;
-  bool _loading;
-  @override
-  void initState() {
-    super.initState();
-    _loading = true;
-    Services.getUser().then((users) {
-      _users = users;
-      _loading = false;
-    });
+  Future<List<User>> _getUsers() async {
+    var data = await http.get("https://jsonplaceholder.typicode.com/users");
+    var jsonData = json.decode(data.body);
+    List<User> users = [];
+    for (var u in jsonData) {
+      User user = User(u["id"], u["name"], u["email"], u["username"]);
+      users.add(user);
+    }
+    print(users.length);
+    return users;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_loading ? "Loading..." : "Users"),
+        title: Text("Api Data"),
       ),
       body: Container(
-        color: Colors.white,
-        child: ListView.builder(
-          itemBuilder: (context, index) {
-            Users user = _users[index];
-            return ListTile(
-              title: Text(user.name),
-              subtitle: Text(user.email),
-            );
-          },
-        ),
+        child: FutureBuilder(
+            future: _getUsers(),
+            builder: (BuildContext contex, AsyncSnapshot snapshot) {
+              if (snapshot.data == null) {
+                return Container(
+                  child: Center(
+                    child: Text("Loading..."),
+                  ),
+                );
+              } else
+                return ListView.builder(
+                  itemCount: snapshot.data.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text(snapshot.data[index].name),
+                    );
+                  },
+                );
+            }),
       ),
     );
   }
+}
+
+class User {
+  final int id;
+  final String name;
+  final String email;
+  final String username;
+
+  User(this.id, this.name, this.email, this.username);
 }
